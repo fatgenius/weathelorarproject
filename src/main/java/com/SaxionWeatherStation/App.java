@@ -2,6 +2,7 @@ package com.SaxionWeatherStation;
 
 import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
+import org.json.JSONObject;
 
 /**
  * Hello world!
@@ -10,9 +11,8 @@ import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 public class App {
 
     MqttClient client;
-    String topic        = "test";
-    String content      = "Message from MqttPublish";
-    int qos             = 0;
+    String topic        = "+/devices/+/up";
+    //int qos             = 0;
     String broker       = "tcp://staging.thethingsnetwork.org:1883";
     String clientId     = "JavaSample";
     MemoryPersistence persistence = new MemoryPersistence();
@@ -37,6 +37,9 @@ public class App {
                 //@Override
                 public void messageArrived(String topic, MqttMessage message) throws Exception {
                     System.out.println("new" + message.toString());
+                    JSONObject jsonObject = new JSONObject(message.toString());
+                    //check if needed field exists
+                    //get value of the field
                 }
 
                 //@Override
@@ -46,19 +49,13 @@ public class App {
 
             MqttConnectOptions connOpts = new MqttConnectOptions();
             connOpts.setCleanSession(false);
-            connOpts.setUserName("70B3D57ED000192C");
-            connOpts.setPassword("WTeciFoKOaDP2FmoxKTnyUOwxnee5kXirtxS6ekfn5w=".toCharArray());
+            connOpts.setUserName("70B3D57ED00018F6");
+            connOpts.setPassword("r7cAAHo0pY17udmgsvIP9HvL1mlmCbzh9kWbOQGKVLs=".toCharArray());
             client.connect(connOpts);
-            client.subscribe("test");
-           //MqttMessage message = new MqttMessage(content.getBytes());
-           //message.setQos(qos);
-           //client.publish(topic, message);
-            //System.out.println("Message published");
+            client.subscribe(topic);
+
         } catch (MqttException e) {
             e.printStackTrace();
         }
-
-
     }
-
 }

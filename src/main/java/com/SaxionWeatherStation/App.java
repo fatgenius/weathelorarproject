@@ -14,7 +14,7 @@ public class App {
     String topic        = "+/devices/+/up";
     //int qos             = 0;
     String broker       = "tcp://staging.thethingsnetwork.org:1883";
-    String clientId     = "JavaSample";
+    String clientId     = "saxion_station";
     MemoryPersistence persistence = new MemoryPersistence();
 
     public App() {
@@ -38,6 +38,19 @@ public class App {
                 public void messageArrived(String topic, MqttMessage message) throws Exception {
                     System.out.println("new" + message.toString());
                     JSONObject jsonObject = new JSONObject(message.toString());
+                    if(jsonObject.has("fields")){
+                        JSONObject jsonObject2 = jsonObject.getJSONObject("fields");
+                        if(jsonObject2.has("message")){
+                            String str = jsonObject2.getString("message");
+                            System.out.println(str);
+                            dataToDatabase(str);
+
+                        } else {
+                            // It doesn't exist, do nothing
+                        }
+                    } else {
+                        // It doesn't exist, do nothing
+                    }
                     //check if needed field exists
                     //get value of the field
                 }
@@ -57,5 +70,16 @@ public class App {
         } catch (MqttException e) {
             e.printStackTrace();
         }
+    }
+    private void dataToDatabase(String str) {
+        String[] parts = str.split("/");
+        String part1 = parts[0];
+        String part2 = parts[1];
+        String part3 = parts[2];
+        String part4 = parts[3];
+        System.out.println(part1);
+        System.out.println(part2);
+        System.out.println(part3);
+        System.out.println(part4);
     }
 }

@@ -15,7 +15,7 @@ dht DHT;
 #define voltageConversionConstant .004882814; //This constant maps the value provided from the analog read function, which ranges from 0 to 1023, to actual voltage, which ranges from 0V to 5V
 #define voltageMin = .4; // Mininum output voltage from anemometer in mV.
 #define windSpeedMin = 0; // Wind speed in meters/sec corresponding to minimum voltage
- 
+
 #define voltageMax = 2.0; // Maximum output voltage from anemometer in mV.
 #define windSpeedMax = 32; // Wind speed in meters/sec corresponding to maximum voltage
 
@@ -109,15 +109,31 @@ void initialize_radio()
 
 }
 
+int getWindSpeed() {
+  int windSpeed = 0;
+  for (byte i = 0; i < 10; i++) {
+    int sensorVoltage = analogRead(A0) * voltageConversionConstant;
+    if (sensorVoltage <= voltageMin) {
+      windSpeed += 0;
+    }
+    else {
+      windSpeed += (sensorVoltage - voltageMin) * windSpeedMax / (voltageMax - voltageMin);
+    }
+    Serial.println(windSpeed);
+    delay(1000);
+  }
+  windSpeed /= 10;
+  return(windSpeed);
+}
 
 void loop() {
   led_on();
-  sensorValue = 
+  int windSpeed = getWindSpeed();
   int chk = DHT.read11(DHT11_PIN);
   String temp = String((bmp.readTemperature() + DHT.temperature) / 2);
   String pressure = String(bmp.readPressure());
   String humidity = String(DHT.humidity, 0);
-  String sending = "/" + temp + "/" + pressure + "/" + humidity;
+  String sending = "/" + temp + "/" + pressure + "/" + humidity + "/" + windSpeed + "/" + lux;
 
   Serial.println(sending);
   Serial.println("TXing");

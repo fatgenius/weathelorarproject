@@ -1,4 +1,6 @@
 #include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_TSL2561_U.h>
 #include <Adafruit_BMP085.h>
 #include <dht.h>
 #include <rn2xx3.h>
@@ -12,12 +14,12 @@ dht DHT;
 
 //Anemometer Defines
 #define windPin A0
-#define voltageConversionConstant .004882814; //This constant maps the value provided from the analog read function, which ranges from 0 to 1023, to actual voltage, which ranges from 0V to 5V
-#define voltageMin = .4; // Mininum output voltage from anemometer in mV.
-#define windSpeedMin = 0; // Wind speed in meters/sec corresponding to minimum voltage
+#define voltageConversionConstant .004882814 //This constant maps the value provided from the analog read function, which ranges from 0 to 1023, to actual voltage, which ranges from 0V to 5V
+#define voltageMin .4 // Mininum output voltage from anemometer in mV.
+#define windSpeedMin 0 // Wind speed in meters/sec corresponding to minimum voltage
 
-#define voltageMax = 2.0; // Maximum output voltage from anemometer in mV.
-#define windSpeedMax = 32; // Wind speed in meters/sec corresponding to maximum voltage
+#define voltageMax 2.0// Maximum output voltage from anemometer in mV.
+#define windSpeedMax 32 // Wind speed in meters/sec corresponding to maximum voltage
 
 
 /*Wiring
@@ -36,7 +38,7 @@ dht DHT;
    Vcc -- 3.3V
    Gnd -- Gnd
 */
-
+Adafruit_TSL2561_Unified tsl = Adafruit_TSL2561_Unified(TSL2561_ADDR_FLOAT, 12345);
 Adafruit_BMP085 bmp;
 rn2xx3 myLora(mySerial);
 
@@ -48,6 +50,12 @@ void setup() {
     Serial.println("Could not find a valid BMP085 sensor, check wireing!");
     while (1) {}
   }
+  if(!tsl.begin())
+  {
+    /* There was a problem detecting the TSL2561 ... check your connections */
+    Serial.print("Ooops, no TSL2561 detected ... Check your wiring or I2C ADDR!");
+    while(1);
+  }
   mySerial.begin(9600);
   Serial.println("Startup lora");
 
@@ -56,8 +64,30 @@ void setup() {
   //transmit a startup message("TTN Mapper on TTN Enschede node");
   myLora.tx("TTN Mapper on TTN Enschede node");
 
+  /* Setup the sensor gain and integration time */
+  configureSensor();
+  
   led_off();
   delay(2000);
+}
+
+void configureSensor(void)
+{
+  /* You can also manually set the gain or enable auto-gain support */
+  // tsl.setGain(TSL2561_GAIN_1X);      /* No gain ... use in bright light to avoid sensor saturation */
+  // tsl.setGain(TSL2561_GAIN_16X);     /* 16x gain ... use in low light to boost sensitivity */
+  tsl.enableAutoRange(true);            /* Auto-gain ... switches automatically between 1x and 16x */
+  
+  /* Changing the integration time gives you better sensor resolution (402ms = 16-bit data) */
+  // tsl.setIntegrationTime(TSL2561_INTEGRATIONTIME_13MS);      /* fast but low resolution */
+  // tsl.setIntegrationTime(TSL2561_INTEGRATIONTIME_101MS);  /* medium resolution and speed   */
+   tsl.setIntegrationTime(TSL2561_INTEGRATIONTIME_402MS);  /* 16-bit data but slowest conversions */
+
+  /* Update these values depending on what you've set above! */  
+  Serial.println("------------------------------------");
+  Serial.print  ("Gain:         "); Serial.println("Auto");
+  Serial.print  ("Timing:       "); Serial.println("402 ms");
+  Serial.println("------------------------------------");
 }
 
 void initialize_radio()
@@ -109,30 +139,35 @@ void initialize_radio()
 
 }
 
+//Function that measures windspeed over 10 seconds and takes the average
 int getWindSpeed() {
   int windSpeed = 0;
-  for (byte i = 0; i < 10; i++) {
+  for (byte i = 0; i < 20; i++) {
     int sensorVoltage = analogRead(A0) * voltageConversionConstant;
-    if (sensorVoltage <= voltageMin) {
+    if (sensorVoltage <= voltageMin) {//If sensor voltage is lower than the Min. output of the sensor the windspeed is 0
       windSpeed += 0;
     }
     else {
       windSpeed += (sensorVoltage - voltageMin) * windSpeedMax / (voltageMax - voltageMin);
     }
     Serial.println(windSpeed);
-    delay(1000);
+    delay(500);
   }
-  windSpeed /= 10;
+  windSpeed /= 20;
   return(windSpeed);
 }
 
 void loop() {
   led_on();
+  /* Get a new Luxsensor event */ 
+  sensors_event_t luxEvent;
+  tsl.getEvent(&luxEvent);
   int windSpeed = getWindSpeed();
   int chk = DHT.read11(DHT11_PIN);
   String temp = String((bmp.readTemperature() + DHT.temperature) / 2);
   String pressure = String(bmp.readPressure());
   String humidity = String(DHT.humidity, 0);
+  String lux = String(luxEvent.light);
   String sending = "/" + temp + "/" + pressure + "/" + humidity + "/" + windSpeed + "/" + lux;
 
   Serial.println(sending);

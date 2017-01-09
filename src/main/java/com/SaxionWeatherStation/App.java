@@ -19,7 +19,7 @@ public class App {
 
 
     /**
-     * default constructor
+     * default constructor+++
      */
     public App() {
     }
@@ -58,6 +58,7 @@ public class App {
                             String str = jsonObject2.getString("message");
                             System.out.println(str);
                             //String st = "445.8/33/44/5/54";
+                            //System.out.println(st);
                             parseMessage(str);
 
                         } else {
@@ -92,8 +93,8 @@ public class App {
         System.out.println("connected to: " + broker);
         client.subscribe(topic);
         System.out.println("subscribed to: " + topic);
-       // String st = "445.8/33/44/5/54";
-        //parseMessage(st);
+      // String st = "445.8/33.00/44/5/54";
+       // parseMessage(st);
     }
 
     /**

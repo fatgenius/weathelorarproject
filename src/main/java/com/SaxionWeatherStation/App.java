@@ -14,7 +14,7 @@ public class App {
     MqttClient client;
     String topic        = "+/devices/+/up";
     String broker       = "tcp://staging.thethingsnetwork.org:1883";
-    String clientId     = "saxion_station";
+    String clientId     = "saxion_stationrtrggd";
     MemoryPersistence persistence = new MemoryPersistence();
 
 
@@ -25,6 +25,7 @@ public class App {
     }
 
     public static void main(String[] args) {
+
         new App().receiveData();
     }
 
@@ -56,6 +57,7 @@ public class App {
                         if(jsonObject2.has("message")){
                             String str = jsonObject2.getString("message");
                             System.out.println(str);
+                            //String st = "445.8/33/44/5/54";
                             parseMessage(str);
 
                         } else {
@@ -90,6 +92,8 @@ public class App {
         System.out.println("connected to: " + broker);
         client.subscribe(topic);
         System.out.println("subscribed to: " + topic);
+       // String st = "445.8/33/44/5/54";
+        //parseMessage(st);
     }
 
     /**
@@ -98,17 +102,17 @@ public class App {
      */
     private void parseMessage(String str) {
         String[] parameters = str.split("/");
-        int numberOfParameters = 4;
+        int numberOfParameters = 5;
 
         if ( isParsable(parameters, numberOfParameters) ) {
-            int x = Integer.parseInt(parameters[0]);
-            int w = Integer.parseInt(parameters[1]);
-            int z = Integer.parseInt(parameters[2]);
-            float f = Float.parseFloat(parameters[3]);
-            System.out.println(x);
-            System.out.println(w);
-            System.out.println(z);
-            System.out.println(f);
+            float  temperature = Float.parseFloat(parameters[0]);
+            int pressure = Integer.parseInt(parameters[1]);
+            int humidity = Integer.parseInt(parameters[2]);
+            int windspeed = Integer.parseInt(parameters[3]);
+            int brightness = Integer.parseInt(parameters[4]);
+
+            System.out.println( "Temperature: "+temperature +"\n" +"Pressure: "+pressure +"\n"
+                    +"Humidity: "+humidity +"\n" +"Windspeed: "+windspeed +"\n" +"Brightness:"+brightness);
             //futhermore insert into database
         }
     }
@@ -122,10 +126,11 @@ public class App {
     private boolean isParsable(String [] parameters, int numberOfParameters) {
         if (parameters.length == numberOfParameters) {
 
-            if (    isInteger(parameters[0]) &&
+            if (    isFloat(parameters[0]) &&
                     isInteger(parameters[1]) &&
                     isInteger(parameters[2]) &&
-                    isFloat(parameters[3])  )
+                    isInteger(parameters[3])  &&
+                    isInteger(parameters[4]) )
             {
                 return true;
             }

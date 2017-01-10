@@ -24,21 +24,21 @@ float sensorVoltage = 0; //Variable that stores the voltage (in Volts) from the 
 float windSpeed = 0; // Wind speed in meters per second (m/s)
  
 #define voltageConversionConstant .004882814; //This constant maps the value provided from the analog read function, which ranges from 0 to 1023, to actual voltage, which ranges from 0V to 5V
-#define sensorDelay = 1000; //Delay between sensor readings, measured in milliseconds (ms)
+#define sensorDelay 100 //Delay between sensor readings, measured in milliseconds (ms)
  
 //Anemometer Technical Variables
 //The following variables correspond to the anemometer sold by Adafruit, but could be modified to fit other anemometers.
  
-#define voltageMin = .4; // Mininum output voltage from anemometer in mV.
-#define windSpeedMin = 0; // Wind speed in meters/sec corresponding to minimum voltage
+#define voltageMin .4 // Mininum output voltage from anemometer in mV.
+#define windSpeedMin 0 // Wind speed in meters/sec corresponding to minimum voltage
  
-#define voltageMax = 2.0; // Maximum output voltage from anemometer in mV.
-#define windSpeedMax = 32; // Wind speed in meters/sec corresponding to maximum voltage
+#define voltageMax 2.0 // Maximum output voltage from anemometer in mV.
+#define windSpeedMax 32 // Wind speed in meters/sec corresponding to maximum voltage
 
  
 void setup() 
 {              
-  Serial.begin(9600);  //Start the serial connection
+  Serial.begin(57600);  //Start the serial connection
 }
  
  

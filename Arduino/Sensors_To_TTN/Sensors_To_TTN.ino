@@ -1,7 +1,6 @@
 #include <Wire.h>
-#include <Adafruit_Sensor.h>
-#include <Adafruit_TSL2561_U.h>
 #include <Adafruit_BMP085.h>
+#include <Adafruit_TSL2561_U.h>
 #include <dht.h>
 #include <rn2xx3.h>
 #include <SoftwareSerial.h>
@@ -38,6 +37,7 @@ dht DHT;
    Vcc -- 3.3V
    Gnd -- Gnd
 */
+
 Adafruit_TSL2561_Unified tsl = Adafruit_TSL2561_Unified(TSL2561_ADDR_FLOAT, 12345);
 Adafruit_BMP085 bmp;
 rn2xx3 myLora(mySerial);
@@ -47,25 +47,28 @@ void setup() {
   led_on();
   Serial.begin(57600);
   if (!bmp.begin()) {
-    Serial.println("Could not find a valid BMP085 sensor, check wireing!");
+    Serial.println(F("Could not find a valid BMP085 sensor, check wireing!"));
     while (1) {}
   }
+  /* Initialise the sensor */
   if(!tsl.begin())
   {
     /* There was a problem detecting the TSL2561 ... check your connections */
-    Serial.print("Ooops, no TSL2561 detected ... Check your wiring or I2C ADDR!");
+    Serial.print(F("Ooops, no TSL2561 detected ... Check your wiring or I2C ADDR!"));
     while(1);
   }
+
   mySerial.begin(9600);
   Serial.println("Startup lora");
-
+  displaySensorDetails();
+  configureSensor();
+  
   initialize_radio();
 
-  //transmit a startup message("TTN Mapper on TTN Enschede node");
+  //transmit a startup message("TTN Mapper on TTN Enschede node")
   myLora.tx("TTN Mapper on TTN Enschede node");
 
   /* Setup the sensor gain and integration time */
-  configureSensor();
   
   led_off();
   delay(2000);
@@ -73,21 +76,21 @@ void setup() {
 
 void configureSensor(void)
 {
-  /* You can also manually set the gain or enable auto-gain support */
-  // tsl.setGain(TSL2561_GAIN_1X);      /* No gain ... use in bright light to avoid sensor saturation */
-  // tsl.setGain(TSL2561_GAIN_16X);     /* 16x gain ... use in low light to boost sensitivity */
   tsl.enableAutoRange(true);            /* Auto-gain ... switches automatically between 1x and 16x */
-  
   /* Changing the integration time gives you better sensor resolution (402ms = 16-bit data) */
-  // tsl.setIntegrationTime(TSL2561_INTEGRATIONTIME_13MS);      /* fast but low resolution */
-  // tsl.setIntegrationTime(TSL2561_INTEGRATIONTIME_101MS);  /* medium resolution and speed   */
-   tsl.setIntegrationTime(TSL2561_INTEGRATIONTIME_402MS);  /* 16-bit data but slowest conversions */
+  tsl.setIntegrationTime(TSL2561_INTEGRATIONTIME_402MS);  /* 16-bit data but slowest conversions */
+}
 
-  /* Update these values depending on what you've set above! */  
-  Serial.println("------------------------------------");
-  Serial.print  ("Gain:         "); Serial.println("Auto");
-  Serial.print  ("Timing:       "); Serial.println("402 ms");
-  Serial.println("------------------------------------");
+void displaySensorDetails(void)
+{
+  sensor_t sensor;
+  tsl.getSensor(&sensor);
+  
+  Serial.println(sensor.name);
+  Serial.println(sensor.version);
+  Serial.println(sensor.sensor_id);
+  
+  delay(500);
 }
 
 void initialize_radio()
@@ -106,7 +109,7 @@ void initialize_radio()
 
   //check communication with radio
   String hweui = myLora.hweui();
-  while (hweui.length() != 16)
+  while(hweui.length() != 16)
   {
     Serial.println("Communication with RN2xx3 unsuccesful. Power cycle the board.");
     Serial.println(hweui);
@@ -123,20 +126,21 @@ void initialize_radio()
   //configure your keys and join the network
   Serial.println("Trying to join TTN");
   bool join_result = false;
-
+  
+  //ABP: initABP(String addr, String AppSKey, String NwkSKey);
+  //join_result = myLora.initABP("02017201", "8D7FFEF938589D95AAD928C2E2E7E48F", "AE17E567AECC8787F749A62F5541D522");
+  
   //OTAA: initOTAA(String AppEUI, String AppKey);
   join_result = myLora.initOTAA("70B3D57ED00018F6", "C3485F16C6EFFF94FE9B95AB8E7EDAAE");
 
-  while (!join_result)
+  while(!join_result)
   {
     Serial.println("Unable to join. Are your keys correct, and do you have TTN coverage?");
     delay(60000); //delay a minute before retry
-    Serial.println("Trying to join TTN");
     join_result = myLora.init();
-
   }
   Serial.println("Successfully joined TTN");
-
+  
 }
 
 //Function that measures windspeed over 10 seconds and takes the average
@@ -158,23 +162,39 @@ int getWindSpeed() {
 }
 
 void loop() {
+  /*Serial.println("startlooop");
   led_on();
-  /* Get a new Luxsensor event */ 
-  sensors_event_t luxEvent;
-  tsl.getEvent(&luxEvent);
-  int windSpeed = getWindSpeed();
+  
+  
   int chk = DHT.read11(DHT11_PIN);
-  String temp = String((bmp.readTemperature() + DHT.temperature) / 2);
-  String pressure = String(bmp.readPressure());
-  String humidity = String(DHT.humidity, 0);
-  String lux = String(luxEvent.light);
-  String sending = "/" + temp + "/" + pressure + "/" + humidity + "/" + windSpeed + "/" + lux;
 
-  Serial.println(sending);
+  String temp = String((bmp.readTemperature() + DHT.temperature) / 2);
+  String humidity = String(DHT.humidity, 0);
+  String pressure = String(bmp.readPressure());
+  String windSpeed = String(getWindSpeed());
+  String lux = String(event.light);
+  
+  String sending = (temp + "/" + pressure + "/" + humidity + "/" + windSpeed + "/" + lux);
+  Serial.println(lux);
+  
   Serial.println("TXing");
   myLora.tx(sending); //one byte, blocking function
 
-  led_off();
+  led_off();*/
+  int chk = DHT.read11(DHT11_PIN);
+  //sensors_event_t event;
+  //tsl.getEvent(&event);
+ 
+  Serial.println(bmp.readTemperature());
+  Serial.println(DHT.temperature, 1);
+  String temperature = String(bmp.readTemperature() + (DHT.temperature));
+  Serial.println("temp sum" + temperature);
+  String windSpeed = String(getWindSpeed());
+  String pressure = String(bmp.readPressure());
+  //String lux = String(event.light);
+  
+  //myLora.tx(windSpeed + "/" + temperature + "/" + pressure);
+  Serial.println("Wait");
   delay(1000);
 }
 

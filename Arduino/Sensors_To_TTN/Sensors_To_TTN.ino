@@ -60,7 +60,6 @@ void setup() {
 
   mySerial.begin(9600);
   Serial.println("Startup lora");
-  displaySensorDetails();
   configureSensor();
   
   initialize_radio();
@@ -79,18 +78,6 @@ void configureSensor(void)
   tsl.enableAutoRange(true);            /* Auto-gain ... switches automatically between 1x and 16x */
   /* Changing the integration time gives you better sensor resolution (402ms = 16-bit data) */
   tsl.setIntegrationTime(TSL2561_INTEGRATIONTIME_402MS);  /* 16-bit data but slowest conversions */
-}
-
-void displaySensorDetails(void)
-{
-  sensor_t sensor;
-  tsl.getSensor(&sensor);
-  
-  Serial.println(sensor.name);
-  Serial.println(sensor.version);
-  Serial.println(sensor.sensor_id);
-  
-  delay(500);
 }
 
 void initialize_radio()

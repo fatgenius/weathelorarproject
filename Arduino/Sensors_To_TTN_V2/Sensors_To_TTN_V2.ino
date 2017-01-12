@@ -3,11 +3,15 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_TSL2561_U.h>
 #include <dht.h>
+#include <rn2xx3.h>
+#include <SoftwareSerial.h>
 
+SoftwareSerial mySerial(10, 11); // RX, TX of rn2xx3
 
 Adafruit_BMP085 bmp;
 Adafruit_TSL2561_Unified tsl = Adafruit_TSL2561_Unified(TSL2561_ADDR_FLOAT, 12345);
 dht DHT;
+rn2xx3 myLora(mySerial);
 
 #define DHT11_PIN 5
 
@@ -37,6 +41,11 @@ void setup() {
   }
   configureSensor();
 
+  mySerial.begin(9600);
+  Serial.println("Startup Lora");
+  initialize_radio();
+  myLora.tx("Arduino Connected");
+  
 
   ledOff();
 }
@@ -69,39 +78,89 @@ int getWindSpeed() {
   return(windSpeed);
 }
 
+void initialize_radio()
+{
+  //reset rn2483
+  pinMode(12, OUTPUT);
+  digitalWrite(12, LOW);
+  delay(500);
+  digitalWrite(12, HIGH);
+
+  delay(100); //wait for the RN2xx3's startup message
+  mySerial.flush();
+
+  //Autobaud the rn2483 module to 9600. The default would otherwise be 57600.
+  myLora.autobaud();
+
+  //check communication with radio
+  String hweui = myLora.hweui();
+  while(hweui.length() != 16)
+  {
+    Serial.println("Communication with RN2xx3 unsuccesful. Power cycle the board.");
+    Serial.println(hweui);
+    delay(10000);
+    hweui = myLora.hweui();
+  }
+
+  //print out the HWEUI so that we can register it via ttnctl
+  Serial.println("When using OTAA, register this DevEUI: ");
+  Serial.println(myLora.hweui());
+  Serial.println("RN2xx3 firmware version:");
+  Serial.println(myLora.sysver());
+
+  //configure your keys and join the network
+  Serial.println("Trying to join TTN");
+  bool join_result = false;
+  
+  //ABP: initABP(String addr, String AppSKey, String NwkSKey);
+  //join_result = myLora.initABP("02017201", "8D7FFEF938589D95AAD928C2E2E7E48F", "AE17E567AECC8787F749A62F5541D522");
+  
+  //OTAA: initOTAA(String AppEUI, String AppKey);
+  join_result = myLora.initOTAA("70B3D57ED00018F6", "C3485F16C6EFFF94FE9B95AB8E7EDAAE");
+
+  while(!join_result)
+  {
+    Serial.println("Unable to join. Are your keys correct, and do you have TTN coverage?");
+    delay(60000); //delay a minute before retry
+    join_result = myLora.init();
+  }
+  Serial.println("Successfully joined TTN");
+  
+}
+
+
 void loop() {
   int readDHT = DHT.read11(DHT11_PIN);//Reads DHT sensor
   sensors_event_t event;
   tsl.getEvent(&event);//Reads TSL sensor
-  
-  Serial.print("TempBMP: ");
-  Serial.println(bmp.readTemperature());
-  Serial.print("TempDHT: ");
-  Serial.println(DHT.temperature);
   String temperature = String((bmp.readTemperature() + DHT.temperature) / 2);
-  Serial.print("AVGTemp: ");
   Serial.println(temperature);
   
-  Serial.print("Humidity: ");
   String humidity = String(DHT.humidity);
   Serial.println(humidity);
 
-  Serial.print("Pressure: ");
   String pressure = String(bmp.readPressure());
   Serial.println(pressure);
 
-  Serial.print("Lux: ");
   String lux = String(event.light);
   Serial.println(lux);
 
-  Serial.print("Windspeed: ");
   String windspeed = String(getWindSpeed());
   Serial.println(windspeed);
 
-  String sending = temperature + "/" + humidity + "/" + pressure + "/" + lux + "/" + windspeed;
-  Serial.println(sending);
-  Serial.println("-------------------");
-  delay(500);
+  myLora.tx("t" + temperature);
+  delay(1000);
+  myLora.tx("h" + humidity);
+  delay(1000);
+  myLora.tx("p" + pressure);
+  delay(1000);
+  myLora.tx("l" + lux);
+  delay(1000);
+  myLora.tx("w" + windspeed);
+  delay(1000);
+  myLora.tx("!");
+  delay(6000);
+  Serial.println("Done Sending");
 }
 
 void ledOn(){

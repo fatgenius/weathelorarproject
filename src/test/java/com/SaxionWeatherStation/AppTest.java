@@ -1,38 +1,42 @@
 package com.SaxionWeatherStation;
 
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
+import static org.junit.Assert.*;
+
 
 /**
  * Unit test for simple App.
  */
-public class AppTest 
-    extends TestCase
-{
-    /**
-     * Create the test case
-     *
-     * @param testName name of the test case
-     */
-    public AppTest( String testName )
-    {
-        super( testName );
+public class AppTest {
+
+
+    @org.junit.Test
+    public void testIsFloat() {
+        String floatString = "11.433";
+        String word = "hello";
+        assertTrue(App.isFloat(floatString));
+        assertFalse(App.isFloat(word));
     }
 
-    /**
-     * @return the suite of tests being tested
-     */
-    public static Test suite()
-    {
-        return new TestSuite( AppTest.class );
+    @org.junit.Test
+    public void testIsInteger() {
+        String integerString = "25";
+        String floatString = "11.433";
+        String word = "hello";
+        assertTrue(App.isInteger(integerString));
+        assertFalse(App.isInteger(floatString));
+        assertFalse(App.isInteger(word));
     }
 
-    /**
-     * Rigourous Test :-)
-     */
-    public void testApp()
-    {
-        assertTrue( true );
+    @org.junit.Test
+    public void testParseMessage() {
+        String invalidDataFormat = "hello world!";
+        String temperature = "t-10";
+        String humidity = "h37.9";
+        String msg = App.parseMessage(invalidDataFormat);
+        String msg2 = App.parseMessage(temperature);
+        String msg3 = App.parseMessage(humidity);
+        assertEquals("invalid string format", msg);
+        assertEquals("-10", msg2);
+        assertEquals("37.9", msg3);
     }
 }

@@ -3,6 +3,11 @@ package com.SaxionWeatherStation;
 import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.json.JSONObject;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 
 /**
  * This application uses eclipse paho client to receive data from broker.
@@ -10,13 +15,16 @@ import org.json.JSONObject;
  * @see <a href="https://eclipse.org/paho/">https://eclipse.org/paho/</a>
  */
 public class App {
-
-    MqttClient client;
-    String topic        = "+/devices/+/up";
-    String broker       = "tcp://staging.thethingsnetwork.org:1883";
-    String clientId     = "saxion_station";
-    MemoryPersistence persistence = new MemoryPersistence();
-
+    private MqttClient client;
+    private String topic        = "+/devices/+/up";
+    private String broker       = "tcp://staging.thethingsnetwork.org:1883";
+    private String clientId     = "saxion_statio";
+    private MemoryPersistence persistence = new MemoryPersistence();
+    private static float temperature = 0;
+    private static float humidity = 0;
+    private static int pressure = 0;
+    private static float brightness = 0;
+    private static int windSpeed = 0;
 
     /**
      * default constructor
@@ -31,14 +39,14 @@ public class App {
     /**
      * Creates new client and manages the data received by the client from broker
      */
-    public void receiveData() {
+    private void receiveData() {
         try {
             client = new MqttClient(broker, clientId, persistence);
 
             client.setCallback(new MqttCallback() {
 
-
-                public void connectionLost(Throwable cause) {//Called when the client lost the connection to the broker
+                //Called when the client lost the connection to the broker
+                public void connectionLost(Throwable cause) {
                     System.out.println("connection lost");
                     try {
                         connect();
@@ -48,25 +56,23 @@ public class App {
                     }
                 }
 
+                //Called when the client receives the message from the broker
                 public void messageArrived(String topic, MqttMessage message) throws Exception {
                     System.out.println("new" + message.toString());
                     JSONObject jsonObject = new JSONObject(message.toString());
-                    if(jsonObject.has("fields")){
+                    if(jsonObject.has("fields")) {
                         JSONObject jsonObject2 = jsonObject.getJSONObject("fields");
-                        if(jsonObject2.has("message")){
+                        if (jsonObject2.has("message")) {
                             String str = jsonObject2.getString("message");
                             System.out.println(str);
                             parseMessage(str);
 
-                        } else {
-                            // It doesn't exist, do nothing
                         }
-                    } else {
-                        // It doesn't exist, do nothing
                     }
                 }
 
-                public void deliveryComplete(IMqttDeliveryToken token) {//Called when a outgoing publish is complete
+                //Called when a outgoing publish is complete
+                public void deliveryComplete(IMqttDeliveryToken token) {
                 }
             });
 
@@ -83,7 +89,7 @@ public class App {
      */
     private void connect() throws MqttException {
         MqttConnectOptions connOpts = new MqttConnectOptions();
-        connOpts.setCleanSession(false);
+        connOpts.setCleanSession(true);
         connOpts.setUserName("70B3D57ED00018F6");
         connOpts.setPassword("r7cAAHo0pY17udmgsvIP9HvL1mlmCbzh9kWbOQGKVLs=".toCharArray());
         client.connect(connOpts);
@@ -95,50 +101,70 @@ public class App {
     /**
      * parses data from the received message. Futhermore calls method to insert parsed data into database
      * @param str strings that contains received message
+     * @return debug String for unit test
      */
-    private void parseMessage(String str) {
-        String[] parameters = str.split("/");
-        int numberOfParameters = 4;
+    static String parseMessage(String str) {
+        String id;
+        String value;
+        id = str.substring(0, 1);
+        value = str.substring(1);
 
-        if ( isParsable(parameters, numberOfParameters) ) {
-            int x = Integer.parseInt(parameters[0]);
-            int w = Integer.parseInt(parameters[1]);
-            int z = Integer.parseInt(parameters[2]);
-            float f = Float.parseFloat(parameters[3]);
-            System.out.println(x);
-            System.out.println(w);
-            System.out.println(z);
-            System.out.println(f);
-            //futhermore insert into database
+        switch (id) {
+            case "t":
+                if (isFloat(value)) {
+                    temperature = Float.parseFloat(value);
+                    System.out.println("temperature: " + temperature);
+                } else {
+                    System.out.println("invalid string format");
+                    return "invalid string format";
+                }
+                break;
+            case "h":
+                if (isFloat(value)) {
+                    humidity = Float.parseFloat(value);
+                    System.out.println("humidity: " + humidity);
+                } else {
+                    System.out.println("invalid string format");
+                    return "invalid string format";
+                }
+                break;
+            case "p":
+                if (isInteger(value)) {
+                    pressure = Integer.parseInt(value);
+                    System.out.println("pressure: " + pressure);
+                } else {
+                    System.out.println("invalid string format");
+                    return "invalid string format";
+                }
+                break;
+            case "l":
+                if (isFloat(value)) {
+                    brightness = Float.parseFloat(value);
+                    System.out.println("brightness: " + brightness);
+                } else {
+                    System.out.println("invalid string format");
+                    return "invalid string format";
+                }
+                break;
+            case "w":
+                if (isInteger(value)) {
+                    windSpeed = Integer.parseInt(value);
+                    System.out.println("wind speed: " + windSpeed);
+                } else {
+                    System.out.println("invalid string format");
+                    return "invalid string format";
+                }
+                break;
+            case "!":
+                    insertIntoDB(temperature, pressure, humidity, windSpeed, brightness);
+                    System.out.println("data added to database");
+            default:
+                System.out.println("invalid string format");
+                //for test
+                return "invalid string format";
         }
-    }
-
-    /**
-     * checks if the received message is in proper format
-     * @param parameters array of parameters extracted from recived message (temp, humidity ...)
-     * @param numberOfParameters expected number of extracted parameters
-     * @return return true if the recived message is in valid format and it can parsed and added to database
-     */
-    private boolean isParsable(String [] parameters, int numberOfParameters) {
-        if (parameters.length == numberOfParameters) {
-
-            if (    isInteger(parameters[0]) &&
-                    isInteger(parameters[1]) &&
-                    isInteger(parameters[2]) &&
-                    isFloat(parameters[3])  )
-            {
-                return true;
-            }
-            else {
-                System.out.println("invalid data format");
-                return false;
-            }
-        }
-
-        else {
-            System.out.println("invalid data format");
-            return false;
-        }
+        // for test
+        return value;
     }
 
     /**
@@ -146,14 +172,10 @@ public class App {
      * @param str string to be checked
      * @return returns true if string can be parsed to integer
      */
-    private static boolean isInteger(String str)
-    {
-        try
-        {
+    static boolean isInteger(String str) {
+        try {
             int i = Integer.parseInt(str);
-        }
-        catch(NumberFormatException nfe)
-        {
+        } catch (NumberFormatException nfe) {
             return false;
         }
         return true;
@@ -164,16 +186,49 @@ public class App {
      * @param str string to be checked
      * @return returns true if string can be parsed to integer
      */
-    private static boolean isFloat(String str)
-    {
-        try
-        {
+    static boolean isFloat(String str) {
+        try {
             float f = Float.parseFloat(str);
-        }
-        catch(NumberFormatException nfe)
-        {
+        } catch(NumberFormatException nfe) {
             return false;
         }
         return true;
+    }
+
+    /**
+     * Inserts received data in to database
+     * @param temperature
+     * @param pressure
+     * @param humidity
+     * @param windspeed
+     * @param brightness
+     */
+    private static void insertIntoDB(float temperature, int pressure, float humidity, int windspeed, float brightness) {
+        DBmanager dbcon = null;
+        Connection conn = null;
+
+        try {
+            //make a connection with the database
+            dbcon = DBmanager.getInstance();
+            conn = dbcon.getConnection();
+
+            Statement stmt = conn.createStatement();
+            Calendar cal = Calendar.getInstance();
+            SimpleDateFormat sdft = new SimpleDateFormat("yyyy/MM/dd HH:mm");
+            String time = sdft.format(cal.getTime());
+
+            stmt.executeUpdate("insert into Datas (Times,Temperature, Air_Pressure,Humidity,Windspeed,Brightness) " +
+                    "values ('" +time +"','"+temperature +"','" +pressure +"','" +humidity +"','"
+                    +windspeed +"','"+brightness +"');"); // SQL statement to push the data in the database.
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            if(dbcon != null) {
+                dbcon.close();
+            } else {
+                System.out.println("no connection");
+            }
+        }
     }
 }

@@ -147,20 +147,22 @@ void loop() {
 
   String windspeed = String(getWindSpeed());
   Serial.println(windspeed);
-
+  ledOn();
   myLora.tx("t" + temperature);
-  delay(1000);
+  delay(2000);
   myLora.tx("h" + humidity);
-  delay(1000);
+  delay(2000);
   myLora.tx("p" + pressure);
-  delay(1000);
+  delay(2000);
   myLora.tx("l" + lux);
-  delay(1000);
+  delay(2000);
   myLora.tx("w" + windspeed);
-  delay(1000);
+  delay(2000);
   myLora.tx("!");
-  delay(6000);
+  ledOff();
+  delay(60000);
   Serial.println("Done Sending");
+  
 }
 
 void ledOn(){

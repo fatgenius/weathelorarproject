@@ -20,11 +20,21 @@ public class App {
     private String broker       = "tcp://staging.thethingsnetwork.org:1883";
     private String clientId     = "saxion_statio";
     private MemoryPersistence persistence = new MemoryPersistence();
-    private static float temperature = 0;
-    private static float humidity = 0;
-    private static int pressure = 0;
-    private static float brightness = 0;
-    private static int windSpeed = 0;
+
+    //attributes that store weather data
+    private static float temperature;
+    private static float humidity;
+    private static int pressure;
+    private static float brightness;
+    private static int windSpeed;
+
+    //true if parameter has been initialized
+    private static boolean isInitTemperature = false;
+    private static boolean isInitHumidity = false;
+    private static boolean isInitPressure = false;
+    private static boolean isInitBrightness = false;
+    private static boolean isInitWindSpeed = false;
+
 
     /**
      * default constructor
@@ -114,6 +124,7 @@ public class App {
                 if (isFloat(value)) {
                     temperature = Float.parseFloat(value);
                     System.out.println("temperature: " + temperature);
+                    isInitTemperature = true;
                 } else {
                     System.out.println("invalid string format");
                     return "invalid string format";
@@ -123,6 +134,7 @@ public class App {
                 if (isFloat(value)) {
                     humidity = Float.parseFloat(value);
                     System.out.println("humidity: " + humidity);
+                    isInitHumidity = true;
                 } else {
                     System.out.println("invalid string format");
                     return "invalid string format";
@@ -132,6 +144,7 @@ public class App {
                 if (isInteger(value)) {
                     pressure = Integer.parseInt(value);
                     System.out.println("pressure: " + pressure);
+                    isInitPressure = true;
                 } else {
                     System.out.println("invalid string format");
                     return "invalid string format";
@@ -141,6 +154,7 @@ public class App {
                 if (isFloat(value)) {
                     brightness = Float.parseFloat(value);
                     System.out.println("brightness: " + brightness);
+                    isInitBrightness = true;
                 } else {
                     System.out.println("invalid string format");
                     return "invalid string format";
@@ -150,14 +164,20 @@ public class App {
                 if (isInteger(value)) {
                     windSpeed = Integer.parseInt(value);
                     System.out.println("wind speed: " + windSpeed);
+                    isInitWindSpeed = true;
                 } else {
                     System.out.println("invalid string format");
                     return "invalid string format";
                 }
                 break;
             case "!":
+                if(isInitTemperature && isInitHumidity && isInitPressure && isInitBrightness && isInitWindSpeed) {
                     insertIntoDB(temperature, pressure, humidity, windSpeed, brightness);
                     System.out.println("data added to database");
+                } else {
+                    System.out.println("data initialization error");
+                }
+                break;
             default:
                 System.out.println("invalid string format");
                 //for test
@@ -197,11 +217,11 @@ public class App {
 
     /**
      * Inserts received data in to database
-     * @param temperature
-     * @param pressure
-     * @param humidity
-     * @param windspeed
-     * @param brightness
+     * @param temperature air temperature
+     * @param pressure air pressure
+     * @param humidity humidity
+     * @param windspeed wind speed
+     * @param brightness brightness
      */
     private static void insertIntoDB(float temperature, int pressure, float humidity, int windspeed, float brightness) {
         DBmanager dbcon = null;
